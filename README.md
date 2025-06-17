@@ -33,7 +33,7 @@ When extracting programming concepts from the uploaded course file, the app buil
 
 For the file uploaded/selected, the user can now choose one out of two options : 1) coding exercises; 2*) real-time vocal conversation with a bot. 
 
-**Scenario Nr. 1 - Coding Exercises \:**
+**Scenario Nr. 1 - Coding Exercises\:**
 
 If the user chooses this option, the backend needs to generate coding exercises with the concepts from the list of the programming concepts <!--
 -->explored in the file, taking into account their level of complexity and understanding so it can generate appropriate exercises. The exercises <!--
@@ -50,5 +50,6 @@ When an exercise is returned, the app extracts the targeted concepts from the mo
 The app runs the user’s code against the test cases provided by the model. <!--
 -->If the user’s output matches the expected output for all cases, the solution is marked as correct.
 
-**Scenario Nr. 2 - Real-Time Vocal Conversation With a Bot \:**
+**Scenario Nr. 2 - Real-Time Vocal Conversation With a Bot\:**
+
 -
