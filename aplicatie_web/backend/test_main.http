@@ -1,11 +1,13 @@
 # Test your FastAPI endpoints
 
+### Get root endpoint
 GET http://127.0.0.1:8000/
 Accept: application/json
 
-###
-
-GET http://127.0.0.1:8000/hello/User
+### Generate exercise about functions
+GET http://localhost:8000/generate_exercise?concept=functions
 Accept: application/json
 
-###
+### Generate exercise about loops
+GET http://localhost:8000/generate_exercise?concept=loops
+Accept: application/json
