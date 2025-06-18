@@ -1,0 +1,24 @@
+# Windows system files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# PyCharm configuration
+aplicatie_web/.idea/
+
+# Python virtual environment
+aplicatie_web/.venv/
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Svelte/Vite generated files
+aplicatie_web/frontend/node_modules/
+aplicatie_web/frontend/.svelte-kit/
+aplicatie_web/frontend/build/
+
+# API keys and configs
+*.env
