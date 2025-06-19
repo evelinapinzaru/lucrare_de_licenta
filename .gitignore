@@ -8,11 +8,11 @@ aplicatie_web/.idea/
 
 # Python virtual environment
 aplicatie_web/.venv/
+venv/
 
-# Python bytecode
+# Python bytecode and compiled artifacts
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
 *.pyd
 
 # Svelte/Vite generated files
@@ -20,5 +20,5 @@ aplicatie_web/frontend/node_modules/
 aplicatie_web/frontend/.svelte-kit/
 aplicatie_web/frontend/build/
 
-# API keys and configs
+# Local environment configuration
 *.env
