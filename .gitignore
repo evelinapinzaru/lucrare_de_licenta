@@ -10,15 +10,19 @@ aplicatie_web/.idea/
 aplicatie_web/.venv/
 venv/
 
-# Python bytecode and compiled artifacts
-__pycache__/
-*.py[cod]
-*.pyd
+# Python bytecode and cache
+**/__pycache__/
+**/*.py[cod]
+**/*.pyo
 
-# Svelte/Vite generated files
+# Frontend build artifacts and dependencies
 aplicatie_web/frontend/node_modules/
 aplicatie_web/frontend/.svelte-kit/
 aplicatie_web/frontend/build/
 
-# Local environment configuration
+# Uploaded user files
+aplicatie_web/backend/uploads/
+
+# Local environment configuration and logs
 *.env
+*.log

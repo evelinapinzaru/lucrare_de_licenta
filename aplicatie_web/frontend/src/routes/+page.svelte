@@ -1,23 +1,33 @@
-<!-- COMMAND TO RUN FRONTEND: `npm run dev` -->
+<!-- COMMAND TO RUN FRONTEND: npm run dev -->
 
 <script>
-	let message = "Loading...";
+	let uploadedFile = null;
+	let uploadMessage = "";
 
-	fetch("http://localhost:8080/session-test", {
-		credentials: "include"
-	})
-		.then(res => res.json())
-		.then(data => {
-			if ('session_id' in data && 'visit_count' in data) {
-				message = `Session ID: ${data.session_id}, Visit count: ${data.visit_count}`;
-			} else {
-				message = "Unexpected response from backend!";
-			}
-		})
-		.catch(error => {
-			message = "Could not connect to backend!";
-			console.error(error);
-		});
+	async function handleUpload() {
+		if (!uploadedFile) {
+			uploadMessage = "Select a file to upload!";
+			return;
+		}
+
+		const formData = new FormData();
+		formData.append("file", uploadedFile);
+
+		try {
+			const res = await fetch("http://localhost:8080/upload", {
+				method: "POST",
+				body: formData
+			});
+			const data = await res.json();
+			uploadMessage = `${data.message} (${data.filename})`;
+		} catch (err) {
+			uploadMessage = "File upload failed!";
+			console.error(err);
+		}
+	}
 </script>
 
-<h1>{message}</h1>
+<label for="file-input"><strong>Choose a file to upload:</strong></label><br /><br />
+<input type="file" on:change={(e) => uploadedFile = e.target.files[0]} />
+<button on:click={handleUpload}>Upload file</button>
+<p>{uploadMessage}</p>
