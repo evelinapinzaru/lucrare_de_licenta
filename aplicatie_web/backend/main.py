@@ -30,6 +30,7 @@ app.add_middleware(
 
 concept_registry = {} # per session
 cooccurrence_maps = {} # per file
+mastered_registry = {} # per session
 
 @app.middleware("http")
 async def session_middleware(request: Request, call_next):
@@ -102,6 +103,7 @@ async def handle_file_upload(request: Request, file: UploadFile = File(...)):
 
     concept_list = [c.strip() for c in concept_string.split(",") if c.strip()]
     concept_registry.setdefault(session_id, {})
+    mastered_registry.setdefault(session_id, set())
 
     for concept in concept_list:
         concept_data = concept_registry[session_id].setdefault(concept, {
@@ -120,5 +122,17 @@ async def handle_file_upload(request: Request, file: UploadFile = File(...)):
         "message": "File uploaded and processed!",
         "text_preview": content[:500],
         "concepts": concept_list,
-        "concept_links": co_map
+        "concept_links": co_map,
+        "mastered_concepts": list(mastered_registry[session_id])
     }
+
+@app.post("/mastered")
+async def mark_concept_mastered(request: Request, concept: str):
+    session_id = request.state.session_id
+    mastered_registry.setdefault(session_id, set()).add(concept)
+    return {"message": f"Concept marked as mastered: {concept}"}
+
+@app.get("/mastered")
+async def get_mastered_concepts(request: Request):
+    session_id = request.state.session_id
+    return {"mastered_concepts": list(mastered_registry.get(session_id, set()))}
