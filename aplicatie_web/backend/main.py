@@ -2,6 +2,7 @@
 
 from fastapi import FastAPI, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from uuid import uuid4
 from dotenv import load_dotenv
 from collections import defaultdict
@@ -14,6 +15,9 @@ import itertools
 
 load_dotenv()
 client = OpenAI()
+
+class MasterConcept(BaseModel):
+    concept: str
 
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -28,17 +32,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-concept_registry = {} # per session
-cooccurrence_maps = {} # per file
-mastered_registry = {} # per session
+session_concepts = {}
+concept_links_by_file = {}
 
 @app.middleware("http")
 async def session_middleware(request: Request, call_next):
     session_id = request.cookies.get("session_id")
+
     if not session_id:
         session_id = str(uuid4())
     request.state.session_id = session_id
-
     response = await call_next(request)
     response.set_cookie(key="session_id", value=session_id)
     return response
@@ -47,13 +50,14 @@ async def session_middleware(request: Request, call_next):
 def root():
     return {"message": "It's working!"}
 
-def get_concepts_from_text(text: str) -> str:
-    limited_text = text[:3000]
+def extract_concepts(text: str) -> str:
+    gpt_input = text[:3000]
     prompt = (
         "Extract a list of programming concepts mentioned or explained in the text below. "
         "Return them as a comma-separated list only, with no explanations or formatting.\n\n"
-        f"{limited_text}\n\nList:"
+        f"{gpt_input}\n\nList:"
     )
+
     try:
         response = client.chat.completions.create(
             model="gpt-4-turbo",
@@ -65,17 +69,18 @@ def get_concepts_from_text(text: str) -> str:
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
-        raise RuntimeError(f"OpenAI request failed: {e}")
+        raise RuntimeError(f"OpenAI request has failed: {e}")
 
-def build_cooccurrence_map(text: str, concepts: list[str]) -> dict:
-    co_map = defaultdict(lambda: defaultdict(int))
+def map_concept_links (text: str, concepts: list[str]) -> dict:
+    concept_links = defaultdict(lambda: defaultdict(int))
     paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
+
     for paragraph in paragraphs:
         found = [c for c in concepts if c.lower() in paragraph.lower()]
         for a, b in itertools.combinations(set(found), 2):
-            co_map[a][b] += 1
-            co_map[b][a] += 1
-    return {k: dict(v) for k, v in co_map.items()}
+            concept_links[a][b] += 1
+            concept_links[b][a] += 1
+    return {k: dict(v) for k, v in concept_links.items()}
 
 @app.post("/upload")
 async def handle_file_upload(request: Request, file: UploadFile = File(...)):
@@ -91,22 +96,20 @@ async def handle_file_upload(request: Request, file: UploadFile = File(...)):
                 content = f.read()
         else:
             content = textract.process(save_path).decode("utf-8")
-
-        concept_string = get_concepts_from_text(content)
+        concept_string = extract_concepts(content)
     except Exception as e:
         return {
             "filename": file.filename,
-            "message": "File saved, but concept extraction failed!",
+            "message": "File has been saved, but concepts couldn't be extracted!",
             "error": repr(e),
             "trace": traceback.format_exc()
         }
 
     concept_list = [c.strip() for c in concept_string.split(",") if c.strip()]
-    concept_registry.setdefault(session_id, {})
-    mastered_registry.setdefault(session_id, set())
+    session_concepts.setdefault(session_id, {})
 
     for concept in concept_list:
-        concept_data = concept_registry[session_id].setdefault(concept, {
+        concept_data = session_concepts[session_id].setdefault(concept, {
             "complexity": "unknown",
             "understanding": 0,
             "files": []
@@ -114,25 +117,30 @@ async def handle_file_upload(request: Request, file: UploadFile = File(...)):
         if file.filename not in concept_data["files"]:
             concept_data["files"].append(file.filename)
 
-    co_map = build_cooccurrence_map(content, concept_list)
-    cooccurrence_maps[file.filename] = co_map
+    concept_links = map_concept_links (content, concept_list)
+    concept_links_by_file[file.filename] = concept_links
+    mastered = [
+        concept for concept in concept_list
+        if session_concepts[session_id][concept]["understanding"] == 1
+    ]
 
     return {
         "filename": file.filename,
-        "message": "File uploaded and processed!",
+        "message": "File has been uploaded and processed!",
         "text_preview": content[:500],
         "concepts": concept_list,
-        "concept_links": co_map,
-        "mastered_concepts": list(mastered_registry[session_id])
+        "mastered_concepts": {concept: True for concept in mastered},
+        "concept_links": concept_links
     }
 
-@app.post("/mastered")
-async def mark_concept_mastered(request: Request, concept: str):
+@app.post("/mark")
+def mark_concept_as_mastered(request: Request, payload: MasterConcept):
     session_id = request.state.session_id
-    mastered_registry.setdefault(session_id, set()).add(concept)
-    return {"message": f"Concept marked as mastered: {concept}"}
+    concept = payload.concept
 
-@app.get("/mastered")
-async def get_mastered_concepts(request: Request):
-    session_id = request.state.session_id
-    return {"mastered_concepts": list(mastered_registry.get(session_id, set()))}
+    if session_id not in session_concepts:
+        return {"message": "Session hasn't been found."}
+    if concept not in session_concepts[session_id]:
+        return {"message": "Concept hasn't been found."}
+    session_concepts[session_id][concept]["understanding"] = 1
+    return {"message": f"{concept} has been marked as mastered."}
