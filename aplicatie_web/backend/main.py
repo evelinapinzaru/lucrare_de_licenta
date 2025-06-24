@@ -19,6 +19,14 @@ client = OpenAI()
 class MasterConcept(BaseModel):
     concept: str
 
+class ExerciseRequest(BaseModel):
+    concept: str
+
+class SolutionSubmission(BaseModel):
+    concept: str
+    exercise: str
+    solution: str
+
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
@@ -144,3 +152,61 @@ def mark_concept_as_mastered(request: Request, payload: MasterConcept):
         return {"message": "Concept hasn't been found."}
     session_concepts[session_id][concept]["understanding"] = 1
     return {"message": f"{concept} has been marked as mastered."}
+
+@app.post("/generate-exercise")
+def generate_exercise(request: Request, payload: ExerciseRequest):
+    session_id = request.state.session_id
+    concept = payload.concept
+
+    prompt = (
+        f"Generate a beginner-friendly coding exercise for the concept: {concept}. "
+        f"Keep it short. Then provide a hint. Format it like this:\n\n"
+        f"Exercise:\n<exercise>\n\nHint:\n<hint>"
+    )
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4-turbo",
+            messages=[
+                {"role": "system", "content": "You help students learn programming by generating exercises."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.5
+        )
+        content = response.choices[0].message.content
+        exercise_text = content.strip()
+
+        # Store in session if possible
+        if session_id in session_concepts and concept in session_concepts[session_id]:
+            session_concepts[session_id][concept]["exercise"] = exercise_text
+
+        return {"concept": concept, "exercise": exercise_text}
+
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/check-solution")
+def evaluate_solution(request: Request, payload: SolutionSubmission):
+    concept = payload.concept
+    exercise = payload.exercise
+    solution = payload.solution
+
+    prompt = (
+        f"You're an AI tutor. Here's a student's solution to a programming exercise about '{concept}'.\n"
+        f"Exercise:\n{exercise}\n\nStudent's solution:\n{solution}\n\n"
+        f"Evaluate the correctness of the solution. Respond with a short explanation and suggestion if needed."
+    )
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4-turbo",
+            messages=[
+                {"role": "system", "content": "You evaluate student code and provide constructive feedback."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.3
+        )
+        return {"feedback": response.choices[0].message.content.strip()}
+
+    except Exception as e:
+        return {"error": str(e)}
