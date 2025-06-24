@@ -26,3 +26,4 @@ aplicatie_web/backend/uploads/
 # Local environment configuration and logs
 *.env
 *.log
+users_db.json

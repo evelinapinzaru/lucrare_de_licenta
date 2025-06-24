@@ -1,6 +1,6 @@
 # COMMAND TO RUN BACKEND: `uvicorn main:app --reload --port 8080`
 
-from fastapi import FastAPI, Request, UploadFile, File
+from fastapi import FastAPI, Request, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from uuid import uuid4
@@ -12,6 +12,8 @@ import textract
 import traceback
 from openai import OpenAI
 import itertools
+import json
+import hashlib
 
 load_dotenv()
 client = OpenAI()
@@ -26,6 +28,22 @@ class SolutionSubmission(BaseModel):
     concept: str
     exercise: str
     solution: str
+
+USER_DB = "users_db.json"
+if not os.path.exists(USER_DB):
+    with open(USER_DB, "w") as f:
+        json.dump({}, f)
+
+def load_users_from_db():
+    with open(USER_DB) as f:
+        return json.load(f)
+
+def save_users_in_db(users):
+    with open(USER_DB, "w") as f:
+        json.dump(users, f)
+
+def hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode()).hexdigest()
 
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -42,11 +60,11 @@ app.add_middleware(
 
 session_concepts = {}
 concept_links_by_file = {}
+session_users = {}
 
 @app.middleware("http")
 async def session_middleware(request: Request, call_next):
     session_id = request.cookies.get("session_id")
-
     if not session_id:
         session_id = str(uuid4())
     request.state.session_id = session_id
@@ -58,6 +76,43 @@ async def session_middleware(request: Request, call_next):
 def root():
     return {"message": "It's working!"}
 
+@app.post("/register")
+def register(username: str = Form(...), password: str = Form(...)):
+    users = load_users_from_db()
+    if username in users:
+        return {"error": "Username already exists."}
+    users[username] = hash_password(password)
+    save_users_in_db(users)
+    return {"message": "User registered successfully."}
+
+@app.post("/login")
+def login(request: Request, username: str = Form(...), password: str = Form(...)):
+    users = load_users_from_db()
+    if username not in users or users[username] != hash_password(password):
+        return {"error": "Invalid username or password."}
+    session_users[request.state.session_id] = username
+    return {"message": f"Logged in as {username}"}
+
+@app.post("/logout")
+def logout(request: Request):
+    session_id = request.state.session_id
+    session_users.pop(session_id, None)
+    return {"message": "Logged out."}
+
+@app.get("/progress")
+def get_progress(request: Request):
+    session_id = request.state.session_id
+    if session_id not in session_concepts:
+        return {"mastered": 0, "unmastered": 0, "total": 0}
+    concepts = session_concepts[session_id]
+    mastered = sum(1 for c in concepts.values() if c["understanding"] == 1)
+    total = len(concepts)
+    return {
+        "mastered": mastered,
+        "unmastered": total - mastered,
+        "total": total
+    }
+
 def extract_concepts(text: str) -> str:
     gpt_input = text[:3000]
     prompt = (
@@ -65,7 +120,6 @@ def extract_concepts(text: str) -> str:
         "Return them as a comma-separated list only, with no explanations or formatting.\n\n"
         f"{gpt_input}\n\nList:"
     )
-
     try:
         response = client.chat.completions.create(
             model="gpt-4-turbo",
@@ -82,7 +136,6 @@ def extract_concepts(text: str) -> str:
 def map_concept_links (text: str, concepts: list[str]) -> dict:
     concept_links = defaultdict(lambda: defaultdict(int))
     paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
-
     for paragraph in paragraphs:
         found = [c for c in concepts if c.lower() in paragraph.lower()]
         for a, b in itertools.combinations(set(found), 2):
@@ -94,10 +147,8 @@ def map_concept_links (text: str, concepts: list[str]) -> dict:
 async def handle_file_upload(request: Request, file: UploadFile = File(...)):
     session_id = request.state.session_id
     save_path = os.path.join(UPLOAD_DIR, file.filename)
-
     with open(save_path, "wb") as out_file:
         shutil.copyfileobj(file.file, out_file)
-
     try:
         if file.filename.endswith(".txt"):
             with open(save_path, "r", encoding="utf-8") as f:
@@ -112,10 +163,8 @@ async def handle_file_upload(request: Request, file: UploadFile = File(...)):
             "error": repr(e),
             "trace": traceback.format_exc()
         }
-
     concept_list = [c.strip() for c in concept_string.split(",") if c.strip()]
     session_concepts.setdefault(session_id, {})
-
     for concept in concept_list:
         concept_data = session_concepts[session_id].setdefault(concept, {
             "complexity": "unknown",
@@ -124,14 +173,12 @@ async def handle_file_upload(request: Request, file: UploadFile = File(...)):
         })
         if file.filename not in concept_data["files"]:
             concept_data["files"].append(file.filename)
-
     concept_links = map_concept_links (content, concept_list)
     concept_links_by_file[file.filename] = concept_links
     mastered = [
         concept for concept in concept_list
         if session_concepts[session_id][concept]["understanding"] == 1
     ]
-
     return {
         "filename": file.filename,
         "message": "File has been uploaded and processed!",
@@ -145,7 +192,6 @@ async def handle_file_upload(request: Request, file: UploadFile = File(...)):
 def mark_concept_as_mastered(request: Request, payload: MasterConcept):
     session_id = request.state.session_id
     concept = payload.concept
-
     if session_id not in session_concepts:
         return {"message": "Session hasn't been found."}
     if concept not in session_concepts[session_id]:
@@ -157,13 +203,11 @@ def mark_concept_as_mastered(request: Request, payload: MasterConcept):
 def generate_exercise(request: Request, payload: ExerciseRequest):
     session_id = request.state.session_id
     concept = payload.concept
-
     prompt = (
         f"Generate a beginner-friendly coding exercise for the concept: {concept}. "
         f"Keep it short. Then provide a hint. Format it like this:\n\n"
         f"Exercise:\n<exercise>\n\nHint:\n<hint>"
     )
-
     try:
         response = client.chat.completions.create(
             model="gpt-4-turbo",
@@ -175,13 +219,9 @@ def generate_exercise(request: Request, payload: ExerciseRequest):
         )
         content = response.choices[0].message.content
         exercise_text = content.strip()
-
-        # Store in session if possible
         if session_id in session_concepts and concept in session_concepts[session_id]:
             session_concepts[session_id][concept]["exercise"] = exercise_text
-
         return {"concept": concept, "exercise": exercise_text}
-
     except Exception as e:
         return {"error": str(e)}
 
@@ -190,13 +230,11 @@ def evaluate_solution(request: Request, payload: SolutionSubmission):
     concept = payload.concept
     exercise = payload.exercise
     solution = payload.solution
-
     prompt = (
         f"You're an AI tutor. Here's a student's solution to a programming exercise about '{concept}'.\n"
         f"Exercise:\n{exercise}\n\nStudent's solution:\n{solution}\n\n"
         f"Evaluate the correctness of the solution. Respond with a short explanation and suggestion if needed."
     )
-
     try:
         response = client.chat.completions.create(
             model="gpt-4-turbo",
@@ -207,6 +245,5 @@ def evaluate_solution(request: Request, payload: SolutionSubmission):
             temperature=0.3
         )
         return {"feedback": response.choices[0].message.content.strip()}
-
     except Exception as e:
         return {"error": str(e)}
