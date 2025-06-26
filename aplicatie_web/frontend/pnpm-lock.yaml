@@ -8,9 +8,18 @@ importers:
 
   .:
     dependencies:
+      autoprefixer:
+        specifier: ^10.4.21
+        version: 10.4.21(postcss@7.0.39)
       flowbite-svelte:
         specifier: ^1.8.1
-        version: 1.8.1(rollup@4.44.0)(svelte@5.34.7)(tailwindcss@4.1.10)
+        version: 1.8.1(rollup@4.44.0)(svelte@5.34.7)(tailwindcss@2.2.19(autoprefixer@10.4.21(postcss@7.0.39))(postcss@7.0.39))
+      postcss:
+        specifier: 7.0.39
+        version: 7.0.39
+      tailwindcss:
+        specifier: 2.2.19
+        version: 2.2.19(autoprefixer@10.4.21(postcss@7.0.39))(postcss@7.0.39)
     devDependencies:
       '@sveltejs/adapter-auto':
         specifier: ^6.0.0
@@ -22,26 +31,17 @@ importers:
         specifier: ^5.0.0
         version: 5.1.0(svelte@5.34.7)(vite@6.3.5)
       '@tailwindcss/forms':
-        specifier: ^0.5.10
-        version: 0.5.10(tailwindcss@4.1.10)
+        specifier: 0.5.10
+        version: 0.5.10(tailwindcss@2.2.19(autoprefixer@10.4.21(postcss@7.0.39))(postcss@7.0.39))
       '@tailwindcss/postcss7-compat':
         specifier: ^2.2.17
         version: 2.2.17
       '@tailwindcss/typography':
-        specifier: ^0.5.16
-        version: 0.5.16(tailwindcss@4.1.10)
-      autoprefixer:
-        specifier: ^10.4.21
-        version: 10.4.21(postcss@8.5.6)
-      postcss:
-        specifier: ^8.5.6
-        version: 8.5.6
+        specifier: 0.4.0
+        version: 0.4.0(tailwindcss@2.2.19(autoprefixer@10.4.21(postcss@7.0.39))(postcss@7.0.39))
       svelte:
         specifier: ^5.0.0
         version: 5.34.7
-      tailwindcss:
-        specifier: ^4.1.10
-        version: 4.1.10
       vite:
         specifier: ^6.2.6
         version: 6.3.5
@@ -442,10 +442,10 @@ packages:
     engines: {node: '>=12.13.0'}
     hasBin: true
 
-  '@tailwindcss/typography@0.5.16':
-    resolution: {integrity: sha512-0wDLwCVF5V3x3b1SGXPCDcdsbDHMBe+lkFzBRaHeLvNi+nrrnZ1lA18u+OTWO8iSWU2GxUOCvlXtDuqftc1oiA==}
+  '@tailwindcss/typography@0.4.0':
+    resolution: {integrity: sha512-3BfOYT5MYNEq81Ism3L2qu/HRP2Q5vWqZtZRQqQrthHuaTK9qpuPfbMT5WATjAM5J1OePKBaI5pLoX4S1JGNMQ==}
     peerDependencies:
-      tailwindcss: '>=3.0.0 || insiders || >=4.0.0-alpha.20 || >=4.0.0-beta.1'
+      tailwindcss: 2.0.0-alpha.24 || ^2.0.0
 
   '@types/cookie@0.6.0':
     resolution: {integrity: sha512-4Kh9a6B2bQciAhf7FSuMRRkUWecJgJu9nPnx3yzpsfXX/c50REIqpHY4C82bXP90qrLtXtkDxTZosYO3UpOwlA==}
@@ -843,6 +843,9 @@ packages:
   lodash.topath@4.5.2:
     resolution: {integrity: sha512-1/W4dM+35DwvE/iEd1M9ekewOSTlpFekhw9mhAtrwjVqUr83/ilQiyAvmg4tVX7Unkcfl1KC+i9WdaT4B6aQcg==}
 
+  lodash.uniq@4.5.0:
+    resolution: {integrity: sha512-xfBaXQd9ryd9dlSDvnvI0lvxfLJlYAZzXomUYzLKtUeOQvOP5piqAWuGtrhWeqaXK9hhoM/iyJc5AV+XfsX3HQ==}
+
   lodash@4.17.21:
     resolution: {integrity: sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==}
 
@@ -954,6 +957,10 @@ packages:
   postcss-js@2.0.3:
     resolution: {integrity: sha512-zS59pAk3deu6dVHyrGqmC3oDXBdNdajk4k1RyxeVXCrcEDBUBHoIhE4QTsmhxgzXxsaqFDAkUZfmMa5f/N/79w==}
 
+  postcss-js@3.0.3:
+    resolution: {integrity: sha512-gWnoWQXKFw65Hk/mi2+WTQTHdPD5UJdDXZmX073EY/B3BWnYjO4F4t0VneTCnCGQ5E5GsCdMkzPaTXwl3r5dJw==}
+    engines: {node: '>=10.0'}
+
   postcss-load-config@3.1.4:
     resolution: {integrity: sha512-6DiM4E7v4coTE4uzA8U//WhtPwyhiim3eyjEMFCnUpzbrkK9wJHgKDT2mR+HbtSrd/NubVaYTOpSpjUl8NQeRg==}
     engines: {node: '>= 10'}
@@ -969,8 +976,14 @@ packages:
   postcss-nested@4.2.3:
     resolution: {integrity: sha512-rOv0W1HquRCamWy2kFl3QazJMMe1ku6rCFoAAH+9AcxdbpDeBr6k968MLWuLjvjMcGEip01ak09hKOEgpK9hvw==}
 
-  postcss-selector-parser@6.0.10:
-    resolution: {integrity: sha512-IQ7TZdoaqbT+LCpShg46jnZVlhWD2w6iQYAcYXfHARZ7X1t/UGhhceQDs5X0cGqKvYlHNOuv7Oa1xmb0oQuA3w==}
+  postcss-nested@5.0.6:
+    resolution: {integrity: sha512-rKqm2Fk0KbA8Vt3AdGN0FB9OBOMDVajMG6ZCf/GoHgdxUJ4sBFp0A/uMIRm+MJUdo33YXEtjqIz8u7DAp8B7DA==}
+    engines: {node: '>=12.0'}
+    peerDependencies:
+      postcss: ^8.2.14
+
+  postcss-selector-parser@6.1.2:
+    resolution: {integrity: sha512-Q8qQfPiZ+THO/3ZrOrO0cJJKfpYCagtMUkXbnEfmgUjwXg6z/WBeOyS9APBBPCTSiDV+s4SwQGu8yFsiMRIudg==}
     engines: {node: '>=4'}
 
   postcss-value-parser@3.3.1:
@@ -1090,8 +1103,13 @@ packages:
     peerDependencies:
       tailwindcss: '*'
 
-  tailwindcss@4.1.10:
-    resolution: {integrity: sha512-P3nr6WkvKV/ONsTzj6Gb57sWPMX29EPNPopo7+FcpkQaNsrNpZ1pv8QmrYI2RqEKD7mlGqLnGovlcYnBK0IqUA==}
+  tailwindcss@2.2.19:
+    resolution: {integrity: sha512-6Ui7JSVtXadtTUo2NtkBBacobzWiQYVjYW0ZnKaP9S1ZCKQ0w7KVNz+YSDI/j7O7KCMHbOkz94ZMQhbT9pOqjw==}
+    engines: {node: '>=12.13.0'}
+    hasBin: true
+    peerDependencies:
+      autoprefixer: ^10.0.2
+      postcss: ^8.0.9
 
   tinyglobby@0.2.14:
     resolution: {integrity: sha512-tX5e7OM1HnYr2+a2C/4V0htOcSQcoSTH9KgJnVvNm5zm/cyEWKJ7j7YutsH9CxMdtOkkLFy2AHrMci9IM8IPZQ==}
@@ -1464,10 +1482,10 @@ snapshots:
     dependencies:
       '@svgdotjs/svg.js': 3.2.4
 
-  '@tailwindcss/forms@0.5.10(tailwindcss@4.1.10)':
+  '@tailwindcss/forms@0.5.10(tailwindcss@2.2.19(autoprefixer@10.4.21(postcss@7.0.39))(postcss@7.0.39))':
     dependencies:
       mini-svg-data-uri: 1.4.4
-      tailwindcss: 4.1.10
+      tailwindcss: 2.2.19(autoprefixer@10.4.21(postcss@7.0.39))(postcss@7.0.39)
 
   '@tailwindcss/postcss7-compat@2.2.17':
     dependencies:
@@ -1498,7 +1516,7 @@ snapshots:
       postcss-js: 2.0.3
       postcss-load-config: 3.1.4(postcss@7.0.39)
       postcss-nested: 4.2.3
-      postcss-selector-parser: 6.0.10
+      postcss-selector-parser: 6.1.2
       postcss-value-parser: 4.2.0
       pretty-hrtime: 1.0.3
       purgecss: 4.1.3
@@ -1509,13 +1527,13 @@ snapshots:
     transitivePeerDependencies:
       - ts-node
 
-  '@tailwindcss/typography@0.5.16(tailwindcss@4.1.10)':
+  '@tailwindcss/typography@0.4.0(tailwindcss@2.2.19(autoprefixer@10.4.21(postcss@7.0.39))(postcss@7.0.39))':
     dependencies:
       lodash.castarray: 4.4.0
       lodash.isplainobject: 4.0.6
       lodash.merge: 4.6.2
-      postcss-selector-parser: 6.0.10
-      tailwindcss: 4.1.10
+      lodash.uniq: 4.5.0
+      tailwindcss: 2.2.19(autoprefixer@10.4.21(postcss@7.0.39))(postcss@7.0.39)
 
   '@types/cookie@0.6.0': {}
 
@@ -1565,14 +1583,14 @@ snapshots:
 
   aria-query@5.3.2: {}
 
-  autoprefixer@10.4.21(postcss@8.5.6):
+  autoprefixer@10.4.21(postcss@7.0.39):
     dependencies:
       browserslist: 4.25.0
       caniuse-lite: 1.0.30001724
       fraction.js: 4.3.7
       normalize-range: 0.1.2
       picocolors: 1.1.1
-      postcss: 8.5.6
+      postcss: 7.0.39
       postcss-value-parser: 4.2.0
 
   autoprefixer@9.8.8:
@@ -1775,7 +1793,7 @@ snapshots:
     transitivePeerDependencies:
       - rollup
 
-  flowbite-svelte@1.8.1(rollup@4.44.0)(svelte@5.34.7)(tailwindcss@4.1.10):
+  flowbite-svelte@1.8.1(rollup@4.44.0)(svelte@5.34.7)(tailwindcss@2.2.19(autoprefixer@10.4.21(postcss@7.0.39))(postcss@7.0.39)):
     dependencies:
       '@floating-ui/dom': 1.7.1
       '@floating-ui/utils': 0.2.9
@@ -1784,8 +1802,8 @@ snapshots:
       flowbite: 3.1.2(rollup@4.44.0)
       svelte: 5.34.7
       tailwind-merge: 3.3.1
-      tailwind-variants: 1.0.0(tailwindcss@4.1.10)
-      tailwindcss: 4.1.10
+      tailwind-variants: 1.0.0(tailwindcss@2.2.19(autoprefixer@10.4.21(postcss@7.0.39))(postcss@7.0.39))
+      tailwindcss: 2.2.19(autoprefixer@10.4.21(postcss@7.0.39))(postcss@7.0.39)
     transitivePeerDependencies:
       - rollup
 
@@ -1929,6 +1947,8 @@ snapshots:
 
   lodash.topath@4.5.2: {}
 
+  lodash.uniq@4.5.0: {}
+
   lodash@4.17.21: {}
 
   magic-string@0.30.17:
@@ -2017,6 +2037,11 @@ snapshots:
       camelcase-css: 2.0.1
       postcss: 7.0.39
 
+  postcss-js@3.0.3:
+    dependencies:
+      camelcase-css: 2.0.1
+      postcss: 8.5.6
+
   postcss-load-config@3.1.4(postcss@7.0.39):
     dependencies:
       lilconfig: 2.1.0
@@ -2027,9 +2052,14 @@ snapshots:
   postcss-nested@4.2.3:
     dependencies:
       postcss: 7.0.39
-      postcss-selector-parser: 6.0.10
+      postcss-selector-parser: 6.1.2
 
-  postcss-selector-parser@6.0.10:
+  postcss-nested@5.0.6(postcss@7.0.39):
+    dependencies:
+      postcss: 7.0.39
+      postcss-selector-parser: 6.1.2
+
+  postcss-selector-parser@6.1.2:
     dependencies:
       cssesc: 3.0.0
       util-deprecate: 1.0.2
@@ -2062,7 +2092,7 @@ snapshots:
       commander: 8.3.0
       glob: 7.2.3
       postcss: 8.5.6
-      postcss-selector-parser: 6.0.10
+      postcss-selector-parser: 6.1.2
 
   queue-microtask@1.2.3: {}
 
@@ -2172,12 +2202,49 @@ snapshots:
 
   tailwind-merge@3.3.1: {}
 
-  tailwind-variants@1.0.0(tailwindcss@4.1.10):
+  tailwind-variants@1.0.0(tailwindcss@2.2.19(autoprefixer@10.4.21(postcss@7.0.39))(postcss@7.0.39)):
     dependencies:
       tailwind-merge: 3.0.2
-      tailwindcss: 4.1.10
+      tailwindcss: 2.2.19(autoprefixer@10.4.21(postcss@7.0.39))(postcss@7.0.39)
 
-  tailwindcss@4.1.10: {}
+  tailwindcss@2.2.19(autoprefixer@10.4.21(postcss@7.0.39))(postcss@7.0.39):
+    dependencies:
+      arg: 5.0.2
+      autoprefixer: 10.4.21(postcss@7.0.39)
+      bytes: 3.1.2
+      chalk: 4.1.2
+      chokidar: 3.6.0
+      color: 4.2.3
+      cosmiconfig: 7.1.0
+      detective: 5.2.1
+      didyoumean: 1.2.2
+      dlv: 1.1.3
+      fast-glob: 3.3.3
+      fs-extra: 10.1.0
+      glob-parent: 6.0.2
+      html-tags: 3.3.1
+      is-color-stop: 1.1.0
+      is-glob: 4.0.3
+      lodash: 4.17.21
+      lodash.topath: 4.5.2
+      modern-normalize: 1.1.0
+      node-emoji: 1.11.0
+      normalize-path: 3.0.0
+      object-hash: 2.2.0
+      postcss: 7.0.39
+      postcss-js: 3.0.3
+      postcss-load-config: 3.1.4(postcss@7.0.39)
+      postcss-nested: 5.0.6(postcss@7.0.39)
+      postcss-selector-parser: 6.1.2
+      postcss-value-parser: 4.2.0
+      pretty-hrtime: 1.0.3
+      purgecss: 4.1.3
+      quick-lru: 5.1.1
+      reduce-css-calc: 2.1.8
+      resolve: 1.22.10
+      tmp: 0.2.3
+    transitivePeerDependencies:
+      - ts-node
 
   tinyglobby@0.2.14:
     dependencies:

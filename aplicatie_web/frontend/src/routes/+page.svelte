@@ -3,6 +3,8 @@
 <script>
     import '../global.css';
     import { Button } from 'flowbite-svelte';
+    import { goto } from '$app/navigation';
+
 	import { onMount } from 'svelte';
 	let uploadedFile = null;
 	let uploadMessage= "";
@@ -19,6 +21,10 @@
     let password = '';
     let sessionUser  = '';
     let progress = { mastered: 0, unmastered: 0, total: 0 };
+
+    function goToExercises() {
+      goto('/exercises');
+    }
 
     onMount(() => {
       username = '';
@@ -169,63 +175,13 @@
   .feedback { margin-top: 1rem; }
 </style>
 
-<h2>User</h2>
-{#if sessionUser}
-  <p>Logged in as <strong>{sessionUser}</strong></p>
-  <button on:click={logout}>Logout</button>
-{:else}
-  <input placeholder="Username" bind:value={username} />
-  <input type="password" placeholder="Password" bind:value={password} />
-  <button on:click={login}>Login</button>
-  <button on:click={register}>Register</button>
-{/if}
+<main class="flex justify-center items-center min-h-screen bg-gray-100">
+  <div class="text-center">
+    <h1 class="text-4xl font-bold mb-4">Welcome to CodeFlow</h1>
+    <p class="text-xl mb-8">How would you like to learn programming today?</p>
 
-<hr />
-<label for="file-input"><strong>Choose a file to upload:</strong></label><br /><br />
-<input type="file" on:change={(e) => uploadedFile = e.target.files[0]} />
-<button on:click={handleUpload}>Upload file</button>
-<p>{uploadMessage}</p>
-
-{#if progress.total}
-  <h3>Progress</h3>
-  <p>{progress.mastered} / {progress.total} concepts mastered</p>
-{/if}
-
-{#if concepts.length}
-  <h2>Concepts ({masteredCount} / {concepts.length} mastered)</h2>
-  <ul>
-    {#each concepts as concept}
-      <li class="concept">
-        <span class:mastered={masteredConcepts[concept]}>
-          {concept}
-        </span>
-        <button on:click={() => markAsMastered(concept)}>Mark as mastered</button>
-        <button on:click={() => generateExercise(concept)}>Generate exercise</button>
-      </li>
-    {/each}
-  </ul>
-{/if}
-
-{#if generatedExercise}
-  <div class="exercise-box">
-    <h3>Exercise for {selectedConcept}</h3>
-    <pre>{generatedExercise}</pre>
-    <p class="hint"><strong>Hint:</strong> {generatedHint}</p>
-
-    <h4>Your Solution</h4>
-    <textarea bind:value={userSolution}></textarea>
-    <button on:click={evaluateSolution}>Submit Solution</button>
-
-    {#if feedback}
-      <div class="feedback">
-        <h4>Feedback</h4>
-        <p>{feedback}</p>
-      </div>
-    {/if}
+    <Button on:click={goToExercises} class="mb-4 text-black bg-blue-500 hover:bg-blue-600">
+      Coding Exercises
+    </Button>
   </div>
-{/if}
-
-<Button>Test Button</Button>
-<div class="bg-blue-500 text-white p-5">
-  This is a Tailwind styled div.
-</div>
+</main>
