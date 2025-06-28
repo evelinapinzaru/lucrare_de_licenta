@@ -1,6 +1,8 @@
 <!-- COMMAND TO RUN FRONTEND: npm run dev -->
 
 <script>
+    import '../global.css';
+    import { Button } from 'flowbite-svelte';
 	import { onMount } from 'svelte';
 	let uploadedFile = null;
 	let uploadMessage= "";
@@ -222,3 +224,8 @@
     {/if}
   </div>
 {/if}
+
+<Button>Test Button</Button>
+<div class="bg-blue-500 text-white p-5">
+  This is a Tailwind styled div.
+</div>
