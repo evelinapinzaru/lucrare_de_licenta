@@ -2,6 +2,7 @@
 
 from fastapi import FastAPI, Request, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from uuid import uuid4
 from dotenv import load_dotenv
@@ -103,15 +104,15 @@ def logout(request: Request):
 def get_progress(request: Request):
     session_id = request.state.session_id
     if session_id not in session_concepts:
-        return {"mastered": 0, "unmastered": 0, "total": 0}
+        return JSONResponse({"mastered": 0, "unmastered": 0, "total": 0})
     concepts = session_concepts[session_id]
     mastered = sum(1 for c in concepts.values() if c["understanding"] == 1)
     total = len(concepts)
-    return {
+    return JSONResponse({
         "mastered": mastered,
         "unmastered": total - mastered,
         "total": total
-    }
+    })
 
 def extract_concepts(text: str) -> str:
     gpt_input = text[:3000]
@@ -157,12 +158,12 @@ async def handle_file_upload(request: Request, file: UploadFile = File(...)):
             content = textract.process(save_path).decode("utf-8")
         concept_string = extract_concepts(content)
     except Exception as e:
-        return {
+        return JSONResponse({
             "filename": file.filename,
             "message": "File has been saved, but concepts couldn't be extracted!",
             "error": repr(e),
             "trace": traceback.format_exc()
-        }
+        })
     concept_list = [c.strip() for c in concept_string.split(",") if c.strip()]
     session_concepts.setdefault(session_id, {})
     for concept in concept_list:
@@ -175,18 +176,11 @@ async def handle_file_upload(request: Request, file: UploadFile = File(...)):
             concept_data["files"].append(file.filename)
     concept_links = map_concept_links (content, concept_list)
     concept_links_by_file[file.filename] = concept_links
-    mastered = [
-        concept for concept in concept_list
-        if session_concepts[session_id][concept]["understanding"] == 1
-    ]
-    return {
+    return JSONResponse({
         "filename": file.filename,
         "message": "File has been uploaded and processed!",
-        "text_preview": content[:500],
-        "concepts": concept_list,
-        "mastered_concepts": {concept: True for concept in mastered},
-        "concept_links": concept_links
-    }
+        "concepts": concept_list
+    })
 
 @app.post("/mark")
 def mark_concept_as_mastered(request: Request, payload: MasterConcept):
@@ -201,7 +195,7 @@ def mark_concept_as_mastered(request: Request, payload: MasterConcept):
 
 @app.post("/generate-exercise")
 def generate_exercise(request: Request, payload: ExerciseRequest):
-    session_id = request.state.session_id
+    session_id = request.state.session_id if hasattr(request.state, 'session_id') else 'default_session'
     concept = payload.concept
     prompt = (
         f"Generate a beginner-friendly coding exercise for the concept: {concept}. "
@@ -219,11 +213,20 @@ def generate_exercise(request: Request, payload: ExerciseRequest):
         )
         content = response.choices[0].message.content
         exercise_text = content.strip()
-        if session_id in session_concepts and concept in session_concepts[session_id]:
-            session_concepts[session_id][concept]["exercise"] = exercise_text
-        return {"concept": concept, "exercise": exercise_text}
+
+        match = exercise_text.split("\n\n")
+        exercise = match[0].replace("Exercise:", "").strip()
+        hint = match[1].replace("Hint:", "").strip()
+
+        if session_id not in session_concepts:
+            session_concepts[session_id] = {}
+        session_concepts[session_id][concept] = session_concepts[session_id].get(concept, {})
+        session_concepts[session_id][concept]["exercise"] = exercise
+        session_concepts[session_id][concept]["hint"] = hint
+        return JSONResponse({"exercise": exercise, "hint": hint})
+
     except Exception as e:
-        return {"error": str(e)}
+        return JSONResponse({"error": str(e)})
 
 @app.post("/check-solution")
 def evaluate_solution(request: Request, payload: SolutionSubmission):
@@ -244,6 +247,6 @@ def evaluate_solution(request: Request, payload: SolutionSubmission):
             ],
             temperature=0.3
         )
-        return {"feedback": response.choices[0].message.content.strip()}
+        return JSONResponse({"feedback": response.choices[0].message.content.strip()})
     except Exception as e:
-        return {"error": str(e)}
+        return JSONResponse({"error": str(e)})
