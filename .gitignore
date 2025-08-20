@@ -1,29 +1,30 @@
 # Windows system files
 Thumbs.db
-ehthumbs.db
 Desktop.ini
 
 # PyCharm configuration
 **/.idea/
 
 # Python virtual environment
-aplicatie_web/.venv/
-venv/
+**/.venv/
 
 # Python bytecode and cache
 **/__pycache__/
 **/*.py[cod]
-**/*.pyo
 
 # Frontend build artifacts and dependencies
 aplicatie_web/frontend/node_modules/
 aplicatie_web/frontend/.svelte-kit/
 aplicatie_web/frontend/build/
+aplicatie_web/frontend/vite.config.js.timestamp-*
+aplicatie_web/frontend/vite.config.ts.timestamp-*
 
-# Uploaded user files
+# User uploaded files
 aplicatie_web/backend/uploads/
 
 # Local environment configuration and logs
-*.env
-*.log
-users_db.json
+**/.env
+**/.env.*
+!**/.env.example
+**/*.log
+aplicatie_web/backend/users_db.json

@@ -14,18 +14,21 @@ importers:
       autoprefixer:
         specifier: ^10.4.21
         version: 10.4.21(postcss@8.5.6)
-      flowbite:
-        specifier: ^3.1.2
-        version: 3.1.2(rollup@4.44.0)
       flowbite-svelte:
         specifier: ^1.8.1
         version: 1.8.1(rollup@4.44.0)(svelte@5.34.8)(tailwindcss@4.1.10)
+      lucide-svelte:
+        specifier: ^0.535.0
+        version: 0.535.0(svelte@5.34.8)
       postcss:
         specifier: ^8.0.9
         version: 8.5.6
       tailwindcss:
         specifier: ^4.1.4
         version: 4.1.10
+      zod:
+        specifier: ^4.1.1
+        version: 4.1.1
     devDependencies:
       '@sveltejs/adapter-auto':
         specifier: ^6.0.1
@@ -766,6 +769,11 @@ packages:
   lodash.merge@4.6.2:
     resolution: {integrity: sha512-0KpjqXRVvrYyCsX1swR/XTK0va6VQkQM6MNo7PqW77ByjAhoARA8EfrP1N4+KlKj8YS0ZUCtRT/YUuhyYDujIQ==}
 
+  lucide-svelte@0.535.0:
+    resolution: {integrity: sha512-qajkcYp9F2ZaIc0bmiuGWdvOW1A5JminAStI/9A4hZSeQnPeGuCNuHH3kMRzASgi99O3Z38NvMK6/0Lv72yxdQ==}
+    peerDependencies:
+      svelte: ^3 || ^4 || ^5.0.0-next.42
+
   magic-string@0.30.17:
     resolution: {integrity: sha512-sNPKHvyjVf7gyjwS4xGTaW/mCnF8wnjtifKBEhxfZ7E/S8tQ0rssrwGNn6q8JH/ohItJfSQp9mBtQYuTlH5QnA==}
 
@@ -1015,6 +1023,9 @@ packages:
 
   zimmerframe@1.1.2:
     resolution: {integrity: sha512-rAbqEGa8ovJy4pyBxZM70hg4pE6gDgaQ0Sl9M3enG3I0d6H4XSAM3GeNGLKnsBpuijUow064sf7ww1nutC5/3w==}
+
+  zod@4.1.1:
+    resolution: {integrity: sha512-SgMZK/h8Tigt9nnKkfJMvB/mKjiJXaX26xegP4sa+0wHIFVFWVlsQGdhklDmuargBD3Hsi3rsQRIzwJIhTPJHA==}
 
 snapshots:
 
@@ -1593,6 +1604,10 @@ snapshots:
 
   lodash.merge@4.6.2: {}
 
+  lucide-svelte@0.535.0(svelte@5.34.8):
+    dependencies:
+      svelte: 5.34.8
+
   magic-string@0.30.17:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.0
@@ -1786,3 +1801,5 @@ snapshots:
     optional: true
 
   zimmerframe@1.1.2: {}
+
+  zod@4.1.1: {}

@@ -1,59 +1,56 @@
 # COMMAND TO RUN BACKEND: `uvicorn main:app --reload --port 8080`
 
-from fastapi import FastAPI, Request, UploadFile, File, Form
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel
-from uuid import uuid4
-from dotenv import load_dotenv
-from collections import defaultdict
-import shutil
-import os
-import textract
-import traceback
-from openai import OpenAI
+# Standard library imports
 import itertools
 import json
-import hashlib
+import logging
+import os
+import shutil
+import traceback
+from collections import defaultdict
+from contextlib import asynccontextmanager
+from typing import Any, cast
+from uuid import uuid4
 
-load_dotenv()
-client = OpenAI()
+# Third-party imports
+from fastapi import FastAPI, File, Request, Response, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from openai import OpenAI
 
-class MasterConcept(BaseModel):
-    concept: str
+# Local imports
+from auth import auth_router
+from config import settings
+from models import ExerciseRequest, MasterConcept, SolutionSubmission
 
-class ExerciseRequest(BaseModel):
-    concept: str
+client = OpenAI(api_key=settings.OPENAI_API_KEY)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-class SolutionSubmission(BaseModel):
-    concept: str
-    exercise: str
-    solution: str
+DEFAULT_SESSION = "fallback_session"
+MAX_CONTENT_LENGTH = 4000
 
-USER_DB = "users_db.json"
-if not os.path.exists(USER_DB):
-    with open(USER_DB, "w") as f:
-        json.dump({}, f)
+os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 
-def load_users_from_db():
-    with open(USER_DB) as f:
-        return json.load(f)
+def get_session_id(request: Request) -> str:
+    if hasattr(request.state, 'session_id'):
+        return request.state.session_id
+    else:
+        logger.warning("Session ID not found, using default session")
+        return DEFAULT_SESSION
 
-def save_users_in_db(users):
-    with open(USER_DB, "w") as f:
-        json.dump(users, f)
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    if not os.path.exists(settings.DATABASE_PATH):
+        with open(settings.DATABASE_PATH, "w") as f:
+            json.dump({}, cast(Any, f))
+    yield
 
-def hash_password(password: str) -> str:
-    return hashlib.sha256(password.encode()).hexdigest()
-
-UPLOAD_DIR = "uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    cast(Any, CORSMiddleware),
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -61,48 +58,40 @@ app.add_middleware(
 
 session_concepts = {}
 concept_links_by_file = {}
-session_users = {}
 
 @app.middleware("http")
-async def session_middleware(request: Request, call_next):
-    session_id = request.cookies.get("session_id")
-    if not session_id:
-        session_id = str(uuid4())
-    request.state.session_id = session_id
-    response = await call_next(request)
-    response.set_cookie(key="session_id", value=session_id)
-    return response
+async def session_middleware(request: Request, call_next) -> Response:
+    try:
+        session_id = request.cookies.get("session_id")
+        if not session_id:
+            session_id = str(uuid4())
+        request.state.session_id = session_id
+        response = await call_next(request)
+        response.set_cookie(key="session_id", value=session_id)
+        return response
+    except Exception as e:
+        logger.error(f"Session middleware failed: {e}")
+        request.state.session_id = DEFAULT_SESSION
+        response = await call_next(request)
+        return response
+
+app.include_router(auth_router)
+
+@app.get("/public-config")
+def get_public_config():
+    return {
+        "maxSizeMb": settings.MAX_SIZE_MB,
+        "supportedExtensions": settings.SUPPORTED_EXTENSIONS,
+        "supportedMimeTypes": settings.SUPPORTED_MIME_TYPES
+    }
 
 @app.get("/")
-def root():
+async def root() -> dict[str, str]:
     return {"message": "It's working!"}
 
-@app.post("/register")
-def register(username: str = Form(...), password: str = Form(...)):
-    users = load_users_from_db()
-    if username in users:
-        return {"error": "Username already exists."}
-    users[username] = hash_password(password)
-    save_users_in_db(users)
-    return {"message": "User registered successfully."}
-
-@app.post("/login")
-def login(request: Request, username: str = Form(...), password: str = Form(...)):
-    users = load_users_from_db()
-    if username not in users or users[username] != hash_password(password):
-        return {"error": "Invalid username or password."}
-    session_users[request.state.session_id] = username
-    return {"message": f"Logged in as {username}"}
-
-@app.post("/logout")
-def logout(request: Request):
-    session_id = request.state.session_id
-    session_users.pop(session_id, None)
-    return {"message": "Logged out."}
-
 @app.get("/progress")
-def get_progress(request: Request):
-    session_id = request.state.session_id
+async def get_progress(request: Request) -> JSONResponse:
+    session_id = get_session_id(request)
     if session_id not in session_concepts:
         return JSONResponse({"mastered": 0, "unmastered": 0, "total": 0})
     concepts = session_concepts[session_id]
@@ -115,7 +104,7 @@ def get_progress(request: Request):
     })
 
 def extract_concepts(text: str) -> str:
-    gpt_input = text[:3000]
+    gpt_input = text[:MAX_CONTENT_LENGTH]
     prompt = (
         "Extract a list of programming concepts mentioned or explained in the text below. "
         "Return them as a comma-separated list only, with no explanations or formatting.\n\n"
@@ -123,18 +112,20 @@ def extract_concepts(text: str) -> str:
     )
     try:
         response = client.chat.completions.create(
-            model="gpt-4-turbo",
+            model=settings.OPENAI_MODEL,
             messages=[
                 {"role": "system", "content": "You extract programming concepts from university course material."},
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.2
+            temperature=0.2,
+            timeout=10
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
+        logger.error("OpenAI extraction failed: %s", e)
         raise RuntimeError(f"OpenAI request has failed: {e}")
 
-def map_concept_links (text: str, concepts: list[str]) -> dict:
+def map_concept_links(text: str, concepts: list[str]) -> dict[str, dict[str, int]]:
     concept_links = defaultdict(lambda: defaultdict(int))
     paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
     for paragraph in paragraphs:
@@ -144,58 +135,58 @@ def map_concept_links (text: str, concepts: list[str]) -> dict:
             concept_links[b][a] += 1
     return {k: dict(v) for k, v in concept_links.items()}
 
-@app.post("/upload")
-async def handle_file_upload(request: Request, file: UploadFile = File(...)):
-    session_id = request.state.session_id
-    save_path = os.path.join(UPLOAD_DIR, file.filename)
-    with open(save_path, "wb") as out_file:
-        shutil.copyfileobj(file.file, out_file)
-    try:
-        if file.filename.endswith(".txt"):
-            with open(save_path, "r", encoding="utf-8") as f:
-                content = f.read()
-        else:
-            content = textract.process(save_path).decode("utf-8")
-        concept_string = extract_concepts(content)
-    except Exception as e:
-        return JSONResponse({
-            "filename": file.filename,
-            "message": "File has been saved, but concepts couldn't be extracted!",
-            "error": repr(e),
-            "trace": traceback.format_exc()
-        })
-    concept_list = [c.strip() for c in concept_string.split(",") if c.strip()]
-    session_concepts.setdefault(session_id, {})
-    for concept in concept_list:
-        concept_data = session_concepts[session_id].setdefault(concept, {
-            "complexity": "unknown",
-            "understanding": 0,
-            "files": []
-        })
-        if file.filename not in concept_data["files"]:
-            concept_data["files"].append(file.filename)
-    concept_links = map_concept_links (content, concept_list)
-    concept_links_by_file[file.filename] = concept_links
-    return JSONResponse({
-        "filename": file.filename,
-        "message": "File has been uploaded and processed!",
-        "concepts": concept_list
-    })
+# @app.post("/upload")
+# async def handle_file_upload(request: Request, file: UploadFile = File(...)):
+#     session_id = get_session_id(request)
+#     save_path = os.path.join(settings.UPLOAD_DIR, file.filename)
+#     with open(save_path, "wb") as out_file:
+#         shutil.copyfileobj(file.file, out_file)
+#     try:
+#         if file.filename.endswith(".txt"):
+#             with open(save_path, "r", encoding="utf-8") as f:
+#                 content = f.read()
+#         else:
+#             content = textract.process(save_path).decode("utf-8")
+#         concept_string = extract_concepts(content)
+#     except Exception as e:
+#         return JSONResponse({
+#             "filename": file.filename,
+#             "message": "File has been saved, but concepts couldn't be extracted!",
+#             "error": repr(e),
+#             "trace": traceback.format_exc()
+#         })
+#     concept_list = [c.strip() for c in concept_string.split(",") if c.strip()]
+#     session_concepts.setdefault(session_id, {})
+#     for concept in concept_list:
+#         concept_data = session_concepts[session_id].setdefault(concept, {
+#             "complexity": "unknown",
+#             "understanding": 0,
+#             "files": []
+#         })
+#         if file.filename not in concept_data["files"]:
+#             concept_data["files"].append(file.filename)
+#     concept_links = map_concept_links (content, concept_list)
+#     concept_links_by_file[file.filename] = concept_links
+#     return JSONResponse({
+#         "filename": file.filename,
+#         "message": "File has been uploaded and processed!",
+#         "concepts": concept_list
+#     })
 
 @app.post("/mark")
-def mark_concept_as_mastered(request: Request, payload: MasterConcept):
-    session_id = request.state.session_id
+async def mark_concept_as_mastered(request: Request, payload: MasterConcept) -> dict[str, str]:
+    session_id = get_session_id(request)
     concept = payload.concept
     if session_id not in session_concepts:
-        return {"message": "Session hasn't been found."}
+        return {"error": "Session hasn't been found."}
     if concept not in session_concepts[session_id]:
-        return {"message": "Concept hasn't been found."}
+        return {"error": "Concept hasn't been found."}
     session_concepts[session_id][concept]["understanding"] = 1
     return {"message": f"{concept} has been marked as mastered."}
 
 @app.post("/generate-exercise")
-def generate_exercise(request: Request, payload: ExerciseRequest):
-    session_id = request.state.session_id if hasattr(request.state, 'session_id') else 'default_session'
+async def generate_exercise(request: Request, payload: ExerciseRequest) -> JSONResponse:
+    session_id = get_session_id(request)
     concept = payload.concept
     prompt = (
         f"Generate a beginner-friendly coding exercise for the concept: {concept}. "
@@ -204,7 +195,7 @@ def generate_exercise(request: Request, payload: ExerciseRequest):
     )
     try:
         response = client.chat.completions.create(
-            model="gpt-4-turbo",
+            model=settings.OPENAI_MODEL,
             messages=[
                 {"role": "system", "content": "You help students learn programming by generating exercises."},
                 {"role": "user", "content": prompt}
@@ -229,7 +220,7 @@ def generate_exercise(request: Request, payload: ExerciseRequest):
         return JSONResponse({"error": str(e)})
 
 @app.post("/check-solution")
-def evaluate_solution(request: Request, payload: SolutionSubmission):
+async def evaluate_solution(payload: SolutionSubmission) -> JSONResponse:
     concept = payload.concept
     exercise = payload.exercise
     solution = payload.solution
@@ -240,7 +231,7 @@ def evaluate_solution(request: Request, payload: SolutionSubmission):
     )
     try:
         response = client.chat.completions.create(
-            model="gpt-4-turbo",
+            model=settings.OPENAI_MODEL,
             messages=[
                 {"role": "system", "content": "You evaluate student code and provide constructive feedback."},
                 {"role": "user", "content": prompt}
