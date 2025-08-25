@@ -164,7 +164,8 @@
       const res = await fetch(`${API_BASE_URL}/signup`, {
         method: 'POST',
         credentials: 'include',
-        body: form
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
       });
 
       if (!res.ok) {
@@ -198,7 +199,8 @@
       const res = await fetch(`${API_BASE_URL}/login`, {
         method: 'POST',
         credentials: 'include',
-        body: form
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
       });
 
       if (!res.ok) {
