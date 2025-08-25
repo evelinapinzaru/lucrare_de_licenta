@@ -1,4 +1,4 @@
-<!-- COMMAND TO RUN FRONTEND: npm run dev -->
+<!-- COMMAND TO RUN FRONTEND: pnpm run dev -->
 
 <script lang="ts">
   // Framework imports
@@ -29,11 +29,6 @@
   let currentUserAvatar: { initial?: string; bg_color?: string } | null = null;
   let isLoggingIn = false;
   let isSigningUp = false;
-
-  const isModalOpen = (m: ModalType) => activeModal === m;
-  const isLoginModalVisible = () => isModalOpen(MODAL_TYPES.LOGIN);
-  const isSignupModalVisible = () => isModalOpen(MODAL_TYPES.SIGNUP);
-  const isUserMenuVisible = () => isModalOpen(MODAL_TYPES.USER_MENU);
 
   // File state
   let selectedFile: File | null = null;
@@ -369,20 +364,20 @@
       {#if currentUser}
         <button class="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm focus:outline-none transition-all"
                 style:background-color={currentUserAvatar?.['bg_color'] || '#6B7280'}
-                style:box-shadow={isUserMenuVisible() ? '0 0 0 3px white, 0 0 0 5px #a855f7' :
+                style:box-shadow={activeModal === MODAL_TYPES.USER_MENU ? '0 0 0 3px white, 0 0 0 5px #a855f7' :
                 (isHovering ? '0 0 0 3px white, 0 0 0 5px #d1d5db' : undefined)}
                 onmouseenter={() => isHovering = true}
                 onmouseleave={() => isHovering = false}
                 onclick={(e) => handleModalToggle(MODAL_TYPES.USER_MENU, e)}
                 title="Logged in as {currentUser}"
                 aria-label="User avatar for {currentUser}, click to open menu"
-                aria-expanded={isUserMenuVisible()}
+                aria-expanded={activeModal === MODAL_TYPES.USER_MENU}
                 aria-haspopup="true">
           {currentUserAvatar?.initial || '?'}
         </button>
 
         <!-- User menu dropdown -->
-        {#if isUserMenuVisible()}
+        {#if activeModal === MODAL_TYPES.USER_MENU}
           <div class="auth-dropdown"
                role="menu">
             <div class="flex flex-col space-y-3">
@@ -427,7 +422,7 @@
                 outline
                 color="dark"
                 size="sm"
-                aria-expanded={isLoginModalVisible()}
+                aria-expanded={activeModal === MODAL_TYPES.LOGIN}
                 aria-haspopup="true">
           Log In
         </Button>
@@ -435,13 +430,13 @@
                 outline
                 color="purple"
                 size="sm"
-                aria-expanded={isSignupModalVisible()}
+                aria-expanded={activeModal === MODAL_TYPES.SIGNUP}
                 aria-haspopup="true">
           Sign Up
         </Button>
 
         <!-- Login dropdown -->
-        {#if isLoginModalVisible()}
+        {#if activeModal === MODAL_TYPES.LOGIN}
           <div class="auth-dropdown"
                role="dialog"
                aria-modal="true"
@@ -498,7 +493,7 @@
         {/if}
 
         <!-- Signup dropdown -->
-        {#if isSignupModalVisible()}
+        {#if activeModal === MODAL_TYPES.SIGNUP}
           <div class="auth-dropdown"
                role="dialog"
                aria-modal="true"

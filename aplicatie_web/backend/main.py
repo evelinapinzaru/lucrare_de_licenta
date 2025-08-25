@@ -1,4 +1,4 @@
-# COMMAND TO RUN BACKEND: `uvicorn main:app --reload --port 8080`
+# COMMAND TO RUN BACKEND: `uvicorn main:app --reload --port 8081`
 
 # Standard library imports
 import itertools

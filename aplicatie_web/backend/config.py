@@ -2,14 +2,15 @@
 from typing import Any, Annotated
 
 # Third-party imports
-from pydantic import BaseSettings, computed_field, BeforeValidator, AfterValidator, Field
+from pydantic import computed_field, BeforeValidator, AfterValidator, Field
+from pydantic_settings import BaseSettings
 
 # --- Defaults for Settings ---
 DEFAULT_DATABASE_PATH = "users_db.json"
 DEFAULT_UPLOAD_DIR = "uploads"
 DEFAULT_OPENAI_MODEL = "gpt-4-turbo"
 DEFAULT_CORS_ORIGINS = ["http://localhost:5173"]
-DEFAULT_PORT = 8080
+DEFAULT_PORT = 8081
 DEFAULT_MAX_SIZE_MB = 10
 DEFAULT_SUPPORTED_EXTENSIONS = ["pdf", "doc", "docx", "txt"]
 DEFAULT_SUPPORTED_MIME_TYPES = [

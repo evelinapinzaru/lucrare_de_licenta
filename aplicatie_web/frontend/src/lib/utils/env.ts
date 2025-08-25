@@ -5,7 +5,7 @@ export function requireEnv(key: ClientEnvKey): string {
   if (value == null || String(value).trim() === '') {
     throw new Error(
         `Missing environment variable: ${key}. ` +
-        `Define it in the frontend .env like this: \`${key}=http://localhost:8080\`.`
+        `Define it in the frontend .env like this: \`${key}=http://localhost:8081\`.`
     );
   }
   return String(value);
