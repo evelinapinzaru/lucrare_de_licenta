@@ -22,9 +22,11 @@ aplicatie_web/frontend/vite.config.ts.timestamp-*
 # User uploaded files
 aplicatie_web/backend/uploads/
 
+# Local TLS certs/keys (dev only)
+aplicatie_web/certs/
+
 # Local environment configuration and logs
 **/.env
 **/.env.*
 !**/.env.example
 **/*.log
-aplicatie_web/backend/users_db.json

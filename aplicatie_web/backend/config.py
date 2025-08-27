@@ -1,12 +1,12 @@
 # Standard library imports
 from typing import Any, Annotated
+from urllib.parse import urlparse
 
 # Third-party imports
 from pydantic import computed_field, BeforeValidator, AfterValidator, Field
 from pydantic_settings import BaseSettings
 
 # --- Defaults for Settings ---
-DEFAULT_DATABASE_PATH = "users_db.json"
 DEFAULT_UPLOAD_DIR = "uploads"
 DEFAULT_OPENAI_MODEL = "gpt-4-turbo"
 DEFAULT_CORS_ORIGINS = ["http://localhost:5173"]
@@ -23,7 +23,6 @@ DEFAULT_SUPPORTED_MIME_TYPES = [
 __all__ = [
     "Settings",
     "settings",
-    "DEFAULT_DATABASE_PATH",
     "DEFAULT_UPLOAD_DIR",
     "DEFAULT_OPENAI_MODEL",
     "DEFAULT_CORS_ORIGINS",
@@ -65,20 +64,35 @@ def _require_non_empty(v: str) -> str:
         raise ValueError("must not be empty")
     return v
 
-def _require_json_file(v: str) -> str:
-    if not v.lower().endswith(".json"):
-        raise ValueError("DATABASE_PATH must end with .json")
-    return v
-
 def _positive_int(v: int) -> int:
     if v <= 0:
         raise ValueError("must be a positive integer")
     return v
 
-def _valid_port(v: int) -> int:
+def _validate_port(v: int) -> int:
     if not (1 <= v <= 65535):
         raise ValueError("PORT must be between 1 and 65535")
     return v
+
+def _normalize_db_url(v: Any) -> str:
+    s = (v or "").strip().strip("'\"")
+    if s.startswith("postgres://"):
+        s = "postgresql+psycopg://" + s[len("postgres://"):]
+    elif s.startswith("postgresql://"):
+        s = "postgresql+psycopg://" + s[len("postgresql://"):]
+    return s
+
+def _validate_db_url(s: str) -> str:
+    if not s:
+        raise ValueError("DATABASE_URL cannot be empty")
+    if not s.startswith("postgresql+psycopg://"):
+        raise ValueError("DATABASE_URL must start with 'postgresql+psycopg://'")
+    p = urlparse(s)
+    if not p.netloc or "@" not in p.netloc:
+        raise ValueError("DATABASE_URL must include credentials and host (user:pass@host)")
+    if not p.path or p.path == "/":
+        raise ValueError("DATABASE_URL must include a database name at the end")
+    return s
 
 # --- Pydantic validator wrappers ---
 def _norm_cors(v: Any) -> list[str]:
@@ -107,14 +121,6 @@ def _norm_openai_model(v: Any) -> str:
 # === Pydantic Settings model ===
 class Settings(BaseSettings):
     # --- Storage paths ---
-    DATABASE_PATH: Annotated[
-        str,
-        BeforeValidator(_normalize_path),
-        AfterValidator(_forbid_path_traversal),
-        AfterValidator(_require_non_empty),
-        AfterValidator(_require_json_file),
-    ] = DEFAULT_DATABASE_PATH
-
     UPLOAD_DIR: Annotated[
         str,
         BeforeValidator(_normalize_path),
@@ -128,7 +134,17 @@ class Settings(BaseSettings):
 
     # --- Server configuration ---
     CORS_ORIGINS: Annotated[list[str], BeforeValidator(_norm_cors)] = DEFAULT_CORS_ORIGINS
-    PORT: Annotated[int, AfterValidator(_valid_port)] = DEFAULT_PORT
+    PORT: Annotated[int, AfterValidator(_validate_port)] = DEFAULT_PORT
+
+    # --- Database connection ---
+    DATABASE_URL: Annotated[
+        str,
+        BeforeValidator(_normalize_db_url),
+        AfterValidator(_validate_db_url),
+    ] = Field(
+        default="",
+        description="SQLAlchemy connection string, e.g. postgresql+psycopg://postgres:<PASS>@localhost:5432/codeflow",
+    )
 
     # --- File upload constraints ---
     MAX_SIZE_MB: Annotated[int, AfterValidator(_positive_int)] = DEFAULT_MAX_SIZE_MB

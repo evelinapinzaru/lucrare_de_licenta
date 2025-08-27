@@ -1,37 +1,19 @@
 # Standard library imports
-import json
-from typing import Dict, Any, cast
+from typing import Dict
 
 # Third-party imports
 from argon2 import PasswordHasher
 from argon2.exceptions import VerificationError
 
-# Local imports
-from config import settings
+session_users: Dict[str, str] = {}
 
 __all__ = [
-    "session_users",
-    "load_users_from_db",
-    "save_users_in_db",
     "hash_password",
     "verify_password",
     "generate_avatar"
 ]
 
 password_hasher = PasswordHasher(time_cost=2, memory_cost=49152, parallelism=1)
-
-session_users: Dict[str, str] = {}
-
-def load_users_from_db() -> Dict[str, Any]:
-    try:
-        with open(settings.DATABASE_PATH) as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return {}
-
-def save_users_in_db(users: Dict[str, Any]) -> None:
-    with open(settings.DATABASE_PATH, "w") as f:
-        json.dump(users, cast(Any, f))
 
 def hash_password(password: str) -> str:
     return password_hasher.hash(password)

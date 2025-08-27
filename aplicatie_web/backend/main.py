@@ -1,19 +1,18 @@
-# COMMAND TO RUN BACKEND: `uvicorn main:app --reload --port 8081`
+# COMMAND TO RUN BACKEND: `uvicorn main:app --reload --port 8081 --ssl-certfile ..\certs\dev-cert.pem --ssl-keyfile ..\certs\dev-key.pem`
 
 # Standard library imports
 import itertools
-import json
 import logging
 import os
 import shutil
 import traceback
 from collections import defaultdict
 from contextlib import asynccontextmanager
+import secrets
 from typing import Any, cast
-from uuid import uuid4
 
 # Third-party imports
-from fastapi import FastAPI, File, Request, Response, UploadFile
+from fastapi import FastAPI, File, HTTPException, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from openai import OpenAI
@@ -21,7 +20,14 @@ from openai import OpenAI
 # Local imports
 from auth import auth_router
 from config import settings
-from models import ExerciseRequest, MasterConcept, SolutionSubmission
+from schemas import ExerciseRequest, MasterConcept, SolutionSubmission
+from database import Base, engine
+import models_orm
+
+def _is_https(request: Request) -> bool:
+    if request.url.scheme == "https":
+        return True
+    return (request.headers.get("x-forwarded-proto") or "").lower() == "https"
 
 client = OpenAI(api_key=settings.OPENAI_API_KEY)
 logging.basicConfig(level=logging.INFO)
@@ -41,10 +47,14 @@ def get_session_id(request: Request) -> str:
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    if not os.path.exists(settings.DATABASE_PATH):
-        with open(settings.DATABASE_PATH, "w") as f:
-            json.dump({}, cast(Any, f))
-    yield
+    Base.metadata.create_all(bind=engine)
+    try:
+        yield
+    finally:
+        try:
+            engine.dispose()
+        except Exception as e:
+            logger.debug("Engine dispose failed: %r",e)
 
 app = FastAPI(lifespan=lifespan)
 
@@ -62,15 +72,21 @@ concept_links_by_file = {}
 @app.middleware("http")
 async def session_middleware(request: Request, call_next) -> Response:
     try:
-        session_id = request.cookies.get("session_id")
-        if not session_id:
-            session_id = str(uuid4())
+        session_id = request.cookies.get("session_id") or secrets.token_urlsafe(32)
         request.state.session_id = session_id
         response = await call_next(request)
-        response.set_cookie(key="session_id", value=session_id)
+        response.set_cookie(
+            key="session_id",
+            value=session_id,
+            httponly=True,
+            samesite="Lax",
+            secure =_is_https(request),
+            path ="/",
+        )
         return response
+
     except Exception as e:
-        logger.error(f"Session middleware failed: {e}")
+        logger.exception(f"Session middleware failed: {e}")
         request.state.session_id = DEFAULT_SESSION
         response = await call_next(request)
         return response
@@ -178,9 +194,9 @@ async def mark_concept_as_mastered(request: Request, payload: MasterConcept) -> 
     session_id = get_session_id(request)
     concept = payload.concept
     if session_id not in session_concepts:
-        return {"error": "Session hasn't been found."}
+        raise HTTPException(status_code=404, detail="Session not found.")
     if concept not in session_concepts[session_id]:
-        return {"error": "Concept hasn't been found."}
+        raise HTTPException(status_code=404, detail="Concept not found.")
     session_concepts[session_id][concept]["understanding"] = 1
     return {"message": f"{concept} has been marked as mastered."}
 
@@ -217,8 +233,8 @@ async def generate_exercise(request: Request, payload: ExerciseRequest) -> JSONR
         return JSONResponse({"exercise": exercise, "hint": hint})
 
     except Exception as e:
-        return JSONResponse({"error": str(e)})
-
+        logger.error("OpenAI generate exercise request failed: %r", e)
+        raise HTTPException(status_code=500, detail="OpenAI request failed")
 @app.post("/check-solution")
 async def evaluate_solution(payload: SolutionSubmission) -> JSONResponse:
     concept = payload.concept
@@ -240,4 +256,5 @@ async def evaluate_solution(payload: SolutionSubmission) -> JSONResponse:
         )
         return JSONResponse({"feedback": response.choices[0].message.content.strip()})
     except Exception as e:
-        return JSONResponse({"error": str(e)})
+        logger.exception("OpenAI check solution request failed: %r", e)
+        raise HTTPException(status_code=502, detail="Upstream AI call failed")

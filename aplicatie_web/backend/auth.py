@@ -1,29 +1,33 @@
 # Standard library imports
-from typing import Dict, Any
+from typing import Dict
 
 # Third-party imports
-from fastapi import APIRouter, Request, Body, Depends
+from fastapi import APIRouter, Request, Body, Depends, HTTPException
+from sqlalchemy.orm import Session
 
 # Local imports
-from models import AuthCredentials
-from utils import (
-    load_users_from_db, save_users_in_db, hash_password,
-    verify_password, generate_avatar, session_users
-)
+from schemas import AuthCredentials
+from utils import hash_password, verify_password, generate_avatar, session_users
+from models_orm import User
+from database import get_db
 
 auth_router = APIRouter()
 
 @auth_router.post("/signup")
 async def signup(request: Request,
                  credentials: AuthCredentials = Body(...),
-                 users: Dict[str, Any] = Depends(load_users_from_db)
-                 ) -> Dict[str, Any]:
+                 db: Session = Depends(get_db)):
     username = credentials.username
     password = credentials.password
-    if username in users:
-        return {"error": "Username already exists."}
-    users[username] = hash_password(password)
-    save_users_in_db(users)
+
+    existing = db.query(User).filter(User.username == username).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Username already exists.")
+    new_user = User(username=username, password_hash=hash_password(password))
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
     session_users[request.state.session_id] = username
 
     return {
@@ -36,12 +40,14 @@ async def signup(request: Request,
 @auth_router.post("/login")
 async def login(request: Request,
                 credentials: AuthCredentials = Body(...),
-                users: Dict[str, Any] = Depends(load_users_from_db)
-                ) -> Dict[str, Any]:
+                db: Session = Depends(get_db)):
     username = credentials.username
     password = credentials.password
-    if username not in users or not verify_password(password, users[username]):
-        return {"error": "Invalid username or password."}
+
+    user = db.query(User).filter(User.username == username).first()
+    if not user or not verify_password(password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Invalid username or password.")
+
     session_users[request.state.session_id] = username
     return {
         "message": f"User logged in successfully.",
