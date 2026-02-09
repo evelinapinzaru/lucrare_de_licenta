@@ -1,7 +1,7 @@
 # CodeFlow - aplicație web educațională pentru învățarea programării prin exerciții personalizate
 
 ## 🎥 Demo Video
-▶️ [https://youtu.be/rL_VjJLaUnw](https://youtu.be/rL_VjJLaUnw)
+[https://youtu.be/rL_VjJLaUnw](https://youtu.be/rL_VjJLaUnw)
 
 ## Detalii legate de repository:
 
