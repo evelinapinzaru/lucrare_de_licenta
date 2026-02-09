@@ -1,5 +1,8 @@
 # CodeFlow - aplicație web educațională pentru învățarea programării prin exerciții personalizate
 
+## 🎥 Demo Video
+▶️ [https://youtu.be/rL_VjJLaUnw](https://youtu.be/rL_VjJLaUnw)
+
 ## Detalii legate de repository:
 
 Adresa repository-ului: [https://gitlab.upt.ro/evelina.pinzaru/lucrare_de_licenta.git](https://gitlab.upt.ro/evelina.pinzaru/lucrare_de_licenta.git).  
