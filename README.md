@@ -3,6 +3,9 @@
 ## 🎥 Demo Video
 [https://youtu.be/rL_VjJLaUnw](https://youtu.be/rL_VjJLaUnw)
 
+## 📊 Prezentare a proiectului
+[Vezi prezentarea PDF](app-presentation.pdf)
+
 ## Detalii legate de repository:
 
 Adresa repository-ului: [https://gitlab.upt.ro/evelina.pinzaru/lucrare_de_licenta.git](https://gitlab.upt.ro/evelina.pinzaru/lucrare_de_licenta.git).  
